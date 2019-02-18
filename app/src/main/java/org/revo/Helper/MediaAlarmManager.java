@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 
 public class MediaAlarmManager {
+
     public static void setAlarm(Context context) {
         if (isAlarmRunning(context)) {
             return;
@@ -17,7 +18,7 @@ public class MediaAlarmManager {
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
         alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(),
-                 60 * 1000,
+                60 * 1000,
                 pendingIntent);
     }
 

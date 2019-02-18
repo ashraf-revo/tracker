@@ -48,7 +48,6 @@ public class TrackingService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("org.revo.fired", new Date().toString());
         run();
         return START_STICKY;
     }
@@ -56,6 +55,7 @@ public class TrackingService extends Service {
 
     @SuppressLint("CheckResult")
     private void run() {
+        Log.d("org.revo.track.fired", new Date().toString());
         final BackServices backServices = new BackServices(getApplicationContext());
         if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED)
             calls(backServices).subscribe(new Consumer<Calls>() {
