@@ -8,10 +8,12 @@ import android.database.Cursor;
 import android.location.Location;
 import android.provider.CallLog;
 import android.provider.Settings;
+import android.support.annotation.NonNull;
 import android.support.annotation.RequiresPermission;
 import android.support.v4.util.Consumer;
 import android.util.Log;
 
+import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -28,25 +30,37 @@ import java.util.Date;
 import java.util.List;
 
 public class BackServices {
+    private LocationRequest locationRequest;
     private FusedLocationProviderClient locationProviderClient;
     private Context context;
     private AccountManager accountManager;
+    private GoogleApiClient googleApiClient;
 
     public BackServices(Context context) {
         this.context = context;
         locationProviderClient = LocationServices.getFusedLocationProviderClient(context);
         accountManager = AccountManager.get(context);
+        locationRequest = getLocationRequest();
+        googleApiClient = null;
     }
 
+    private static LocationRequest getLocationRequest() {
+        LocationRequest myLocationRequest = new LocationRequest();
+        myLocationRequest.setInterval(10000);
+        myLocationRequest.setFastestInterval(5000);
+        myLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        return myLocationRequest;
+    }
 
     @RequiresPermission(anyOf = {"android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_FINE_LOCATION"})
     public void location(final Consumer<Location> locationConsumer) {
 
-        LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, new LocationRequest(), new LocationListener() {
+        LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-                locationConsumer.accept(location);
-                stop();
+                if (location != null)
+                    locationConsumer.accept(location);
+                stop(locationConsumer);
             }
         });
 
@@ -62,16 +76,18 @@ public class BackServices {
                 });
     }
 
-    private void stop() {
-        LocationServices.FusedLocationApi.removeLocationUpdates(
-                googleApiClient,
-                this
-        ).setResultCallback(new ResultCallback<Status>() {
+    private void stop(final Consumer<Location> locationConsumer) {
+        LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, new LocationListener() {
             @Override
-            public void onResult(Status status) {
+            public void onLocationChanged(Location location) {
+                if (location != null) locationConsumer.accept(location);
+            }
+        }).setResultCallback(new ResultCallback<Status>() {
+            @Override
+            public void onResult(@NonNull Status status) {
+
             }
         });
-
     }
 
 
