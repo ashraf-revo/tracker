@@ -12,7 +12,11 @@ import android.support.annotation.RequiresPermission;
 import android.support.v4.util.Consumer;
 import android.util.Log;
 
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnSuccessListener;
 
@@ -37,6 +41,16 @@ public class BackServices {
 
     @RequiresPermission(anyOf = {"android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_FINE_LOCATION"})
     public void location(final Consumer<Location> locationConsumer) {
+
+        LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, new LocationRequest(), new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                locationConsumer.accept(location);
+                stop();
+            }
+        });
+
+
         locationProviderClient.getLastLocation()
                 .addOnSuccessListener(new OnSuccessListener<Location>() {
                     @Override
@@ -46,6 +60,18 @@ public class BackServices {
                         }
                     }
                 });
+    }
+
+    private void stop() {
+        LocationServices.FusedLocationApi.removeLocationUpdates(
+                googleApiClient,
+                this
+        ).setResultCallback(new ResultCallback<Status>() {
+            @Override
+            public void onResult(Status status) {
+            }
+        });
+
     }
 
 

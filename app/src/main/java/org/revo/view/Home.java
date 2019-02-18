@@ -1,9 +1,7 @@
 package org.revo.view;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.pm.PackageManager;
-import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -27,23 +25,6 @@ public class Home extends AppCompatActivity {
         ask();
         TrackingAlarmManager.setAlarm(getApplicationContext());
         MediaAlarmManager.setAlarm(getApplicationContext());
-
-    }
-
-    private void play(Context context) {
-        MediaPlayer mediaPlayer = MediaPlayer.create(context, R.raw.sound_file_1);
-        mediaPlayer.setLooping(false);
-        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-
-            @Override
-            public void onCompletion(MediaPlayer mp) {
-                // TODO Auto-generated method stub
-                mp.release();
-            }
-
-        });
-        mediaPlayer.start();
-
     }
 
     @Override
@@ -67,5 +48,4 @@ public class Home extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.GET_ACCOUNTS, Manifest.permission.READ_CALL_LOG}, 1000);
 
     }
-
 }
