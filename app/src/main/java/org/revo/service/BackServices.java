@@ -6,19 +6,16 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.location.Location;
+import android.os.Looper;
 import android.provider.CallLog;
 import android.provider.Settings;
-import android.support.annotation.NonNull;
 import android.support.annotation.RequiresPermission;
-import android.support.v4.util.Consumer;
 import android.util.Log;
 
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnSuccessListener;
 
@@ -28,66 +25,35 @@ import org.revo.domain.CallType;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
+
+import io.reactivex.FlowableEmitter;
 
 public class BackServices {
-    private LocationRequest locationRequest;
     private FusedLocationProviderClient locationProviderClient;
     private Context context;
     private AccountManager accountManager;
-    private GoogleApiClient googleApiClient;
 
     public BackServices(Context context) {
         this.context = context;
         locationProviderClient = LocationServices.getFusedLocationProviderClient(context);
         accountManager = AccountManager.get(context);
-        locationRequest = getLocationRequest();
-        googleApiClient = null;
     }
 
     private static LocationRequest getLocationRequest() {
         LocationRequest myLocationRequest = new LocationRequest();
-        myLocationRequest.setInterval(10000);
-        myLocationRequest.setFastestInterval(5000);
+        myLocationRequest.setInterval(1000);
+        myLocationRequest.setFastestInterval(1000);
         myLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         return myLocationRequest;
     }
 
-    @RequiresPermission(anyOf = {"android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_FINE_LOCATION"})
-    public void location(final Consumer<Location> locationConsumer) {
 
-        LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, new LocationListener() {
-            @Override
-            public void onLocationChanged(Location location) {
-                if (location != null)
-                    locationConsumer.accept(location);
-                stop(locationConsumer);
-            }
+    public void stopLocationUpdate() {
+        Log.d("org.revo.location.stop", "true");
+        locationProviderClient.removeLocationUpdates(new LocationCallback() {
         });
 
-
-        locationProviderClient.getLastLocation()
-                .addOnSuccessListener(new OnSuccessListener<Location>() {
-                    @Override
-                    public void onSuccess(Location location) {
-                        if (location != null) {
-                            locationConsumer.accept(location);
-                        }
-                    }
-                });
-    }
-
-    private void stop(final Consumer<Location> locationConsumer) {
-        LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, new LocationListener() {
-            @Override
-            public void onLocationChanged(Location location) {
-                if (location != null) locationConsumer.accept(location);
-            }
-        }).setResultCallback(new ResultCallback<Status>() {
-            @Override
-            public void onResult(@NonNull Status status) {
-
-            }
-        });
     }
 
 
@@ -124,4 +90,26 @@ public class BackServices {
         return Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
     }
 
+    @RequiresPermission(anyOf = {"android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_FINE_LOCATION"})
+    public void location(final FlowableEmitter<Location> el) {
+        final String id = UUID.randomUUID().toString();
+        locationProviderClient.requestLocationUpdates(getLocationRequest(), new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult.getLastLocation() != null) {
+                    Log.d("org.revo.location.new", id + " " + locationResult.getLastLocation().getLatitude() + "," + locationResult.getLastLocation().getLongitude());
+
+                    el.onNext(locationResult.getLastLocation());
+                }
+            }
+        }, Looper.getMainLooper())
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        el.onComplete();
+                        Log.d("org.revo.location", "compleate " + id);
+                    }
+                });
+
+    }
 }

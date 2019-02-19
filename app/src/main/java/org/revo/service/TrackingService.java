@@ -17,10 +17,13 @@ import org.revo.domain.User;
 
 import java.util.Date;
 
+import io.reactivex.BackpressureStrategy;
+import io.reactivex.Flowable;
+import io.reactivex.FlowableEmitter;
+import io.reactivex.FlowableOnSubscribe;
 import io.reactivex.Maybe;
+import io.reactivex.MaybeSource;
 import io.reactivex.Single;
-import io.reactivex.SingleEmitter;
-import io.reactivex.SingleOnSubscribe;
 import io.reactivex.SingleSource;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
@@ -36,8 +39,9 @@ public class TrackingService extends Service {
         context.startService(starter);
     }
 
-    public void stop(Context context) {
+    public void stop(Context context, BackServices backServices) {
         Intent starter = new Intent(context, TrackingService.class);
+        backServices.stopLocationUpdate();
         context.stopService(starter);
     }
 
@@ -83,7 +87,7 @@ public class TrackingService extends Service {
             });
 
 
-        stop(getApplicationContext());
+        stop(getApplicationContext(), backServices);
     }
 
     public static Maybe<Calls> calls(final BackServices backServices) {
@@ -136,23 +140,36 @@ public class TrackingService extends Service {
     }
 
 
-    public static Single<Location> location(final BackServices backServices) {
-        return Single.create(new SingleOnSubscribe<Location>() {
+    public static Maybe<Location> location(final BackServices backServices) {
+
+/*
+        new android.support.v4.util.Consumer<android.location.Location>() {
+            @Override
+            public void accept(android.location.Location location) {
+                e.onNext(new Location(null, backServices.getId(), new Date(), location.getLatitude(), location.getLongitude()));
+            }
+        }
+*/
+        return Flowable.create(new FlowableOnSubscribe<android.location.Location>() {
             @SuppressLint("MissingPermission")
             @Override
-            public void subscribe(final SingleEmitter<Location> e) {
-                backServices.location(new android.support.v4.util.Consumer<android.location.Location>() {
-                    @Override
-                    public void accept(android.location.Location location) {
-                        e.onSuccess(new Location(null, backServices.getId(), new Date(), location.getLatitude(), location.getLongitude()));
-                    }
-                });
+            public void subscribe(final FlowableEmitter<android.location.Location> e) {
+                backServices.location(e);
             }
-        }).observeOn(Schedulers.io()).subscribeOn(Schedulers.io())
-                .flatMap(new Function<Location, SingleSource<Location>>() {
+        }, BackpressureStrategy.BUFFER)
+                .lastElement()
+                .map(new Function<android.location.Location, Location>() {
                     @Override
-                    public SingleSource<Location> apply(Location location) {
-                        return service.location(location);
+                    public Location apply(android.location.Location location) {
+                        return new Location(null, backServices.getId(), new Date(), location.getLatitude(), location.getLongitude());
+                    }
+                })
+                .observeOn(Schedulers.io()).subscribeOn(Schedulers.io())
+
+                .flatMap(new Function<Location, MaybeSource<Location>>() {
+                    @Override
+                    public MaybeSource<Location> apply(Location location) {
+                        return service.location(location).toMaybe();
                     }
                 });
     }
