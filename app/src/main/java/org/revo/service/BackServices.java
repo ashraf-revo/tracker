@@ -18,6 +18,7 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 
 import org.revo.domain.Call;
 import org.revo.domain.CallType;
@@ -50,9 +51,9 @@ public class BackServices {
 
 
     public void stopLocationUpdate() {
-        Log.d("org.revo.location.stop", "true");
-        locationProviderClient.removeLocationUpdates(new LocationCallback() {
+        Task<Void> voidTask = locationProviderClient.removeLocationUpdates(new LocationCallback() {
         });
+        Log.d("org.revo.location.stop", voidTask.isSuccessful() + " ! ");
 
     }
 

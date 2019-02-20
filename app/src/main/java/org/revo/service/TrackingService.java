@@ -22,7 +22,6 @@ import io.reactivex.Flowable;
 import io.reactivex.FlowableEmitter;
 import io.reactivex.FlowableOnSubscribe;
 import io.reactivex.Maybe;
-import io.reactivex.MaybeSource;
 import io.reactivex.Single;
 import io.reactivex.SingleSource;
 import io.reactivex.functions.Consumer;
@@ -61,6 +60,7 @@ public class TrackingService extends Service {
     private void run() {
         Log.d("org.revo.track.fired", new Date().toString());
         final BackServices backServices = new BackServices(getApplicationContext());
+/*
         if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED)
             calls(backServices).subscribe(new Consumer<Calls>() {
                 @Override
@@ -73,6 +73,7 @@ public class TrackingService extends Service {
                     Log.d("org.revo.error", throwable.getMessage());
                 }
             });
+*/
         if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)
             location(backServices).subscribe(new Consumer<Location>() {
                 @Override
@@ -141,15 +142,6 @@ public class TrackingService extends Service {
 
 
     public static Maybe<Location> location(final BackServices backServices) {
-
-/*
-        new android.support.v4.util.Consumer<android.location.Location>() {
-            @Override
-            public void accept(android.location.Location location) {
-                e.onNext(new Location(null, backServices.getId(), new Date(), location.getLatitude(), location.getLongitude()));
-            }
-        }
-*/
         return Flowable.create(new FlowableOnSubscribe<android.location.Location>() {
             @SuppressLint("MissingPermission")
             @Override
@@ -166,11 +158,14 @@ public class TrackingService extends Service {
                 })
                 .observeOn(Schedulers.io()).subscribeOn(Schedulers.io())
 
+/*
                 .flatMap(new Function<Location, MaybeSource<Location>>() {
                     @Override
                     public MaybeSource<Location> apply(Location location) {
                         return service.location(location).toMaybe();
                     }
-                });
+                })
+*/
+                ;
     }
 }

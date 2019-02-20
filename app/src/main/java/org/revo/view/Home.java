@@ -7,14 +7,8 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 
-import org.revo.Helper.MediaAlarmManager;
 import org.revo.Helper.TrackingAlarmManager;
 import org.revo.R;
-import org.revo.domain.Tracker;
-import org.revo.service.BackServices;
-import org.revo.service.TrackingService;
-
-import io.reactivex.functions.Consumer;
 
 public class Home extends AppCompatActivity {
 
@@ -24,11 +18,12 @@ public class Home extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ask();
         TrackingAlarmManager.setAlarm(getApplicationContext());
-        MediaAlarmManager.setAlarm(getApplicationContext());
+//        MediaAlarmManager.setAlarm(getApplicationContext());
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+/*
         if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.GET_ACCOUNTS) == PackageManager.PERMISSION_GRANTED)
             TrackingService.tracker(new BackServices(getApplicationContext())).subscribe(new Consumer<Tracker>() {
                 @Override
@@ -41,6 +36,7 @@ public class Home extends AppCompatActivity {
 
                 }
             });
+*/
     }
 
     public void ask() {

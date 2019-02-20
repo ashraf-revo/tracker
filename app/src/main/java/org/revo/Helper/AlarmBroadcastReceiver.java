@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-import org.revo.service.MediaService;
 import org.revo.service.TrackingService;
 
 public class AlarmBroadcastReceiver extends BroadcastReceiver {
@@ -13,8 +12,10 @@ public class AlarmBroadcastReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (!isServiceRunning(context, TrackingService.class))
             TrackingService.start(context);
+/*
         if (!isServiceRunning(context, MediaService.class))
             MediaService.start(context);
+*/
     }
 
     public static boolean isServiceRunning(Context context, Class aClass) {
