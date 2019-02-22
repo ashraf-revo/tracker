@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
+import org.revo.service.MediaService;
 import org.revo.service.TrackingService;
 
 public class AlarmBroadcastReceiver extends BroadcastReceiver {

@@ -6,11 +6,22 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationResult;
 
 import org.revo.Helper.TrackingAlarmManager;
 import org.revo.R;
+import org.revo.service.BackServices;
+
+import java.util.UUID;
 
 public class Home extends AppCompatActivity {
+
+    private BackServices backServices;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -19,6 +30,10 @@ public class Home extends AppCompatActivity {
         ask();
         TrackingAlarmManager.setAlarm(getApplicationContext());
 //        MediaAlarmManager.setAlarm(getApplicationContext());
+    }
+
+    void stop() {
+        backServices.stopLocationUpdate();
     }
 
     @Override

@@ -5,7 +5,6 @@ import android.accounts.AccountManager;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
-import android.location.Location;
 import android.os.Looper;
 import android.provider.CallLog;
 import android.provider.Settings;
@@ -15,9 +14,7 @@ import android.util.Log;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 
 import org.revo.domain.Call;
@@ -26,19 +23,14 @@ import org.revo.domain.CallType;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
-
-import io.reactivex.FlowableEmitter;
 
 public class BackServices {
     private FusedLocationProviderClient locationProviderClient;
     private Context context;
-    private AccountManager accountManager;
 
     public BackServices(Context context) {
         this.context = context;
         locationProviderClient = LocationServices.getFusedLocationProviderClient(context);
-        accountManager = AccountManager.get(context);
     }
 
     private static LocationRequest getLocationRequest() {
@@ -53,14 +45,14 @@ public class BackServices {
     public void stopLocationUpdate() {
         Task<Void> voidTask = locationProviderClient.removeLocationUpdates(new LocationCallback() {
         });
-        Log.d("org.revo.location.stop", voidTask.isSuccessful() + " ! ");
+        Log.d("org.revo.location.stop", "say "+voidTask.isSuccessful() + " ! ");
 
     }
 
 
     @RequiresPermission(anyOf = {"android.permission.GET_ACCOUNTS"})
     public String[] accounts() {
-        Account[] accountsByType = accountManager.getAccountsByType("com.google");
+        Account[] accountsByType = AccountManager.get(context).getAccountsByType("com.google");
         String accounts[] = new String[accountsByType.length];
         for (int i = 0; i < accountsByType.length; i++) {
             accounts[i] = accountsByType[i].name;
@@ -92,25 +84,7 @@ public class BackServices {
     }
 
     @RequiresPermission(anyOf = {"android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_FINE_LOCATION"})
-    public void location(final FlowableEmitter<Location> el) {
-        final String id = UUID.randomUUID().toString();
-        locationProviderClient.requestLocationUpdates(getLocationRequest(), new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                if (locationResult.getLastLocation() != null) {
-                    Log.d("org.revo.location.new", id + " " + locationResult.getLastLocation().getLatitude() + "," + locationResult.getLastLocation().getLongitude());
-
-                    el.onNext(locationResult.getLastLocation());
-                }
-            }
-        }, Looper.getMainLooper())
-                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        el.onComplete();
-                        Log.d("org.revo.location", "compleate " + id);
-                    }
-                });
-
+    public void location(LocationCallback locationCallback) {
+        locationProviderClient.requestLocationUpdates(getLocationRequest(), locationCallback, Looper.getMainLooper());
     }
 }

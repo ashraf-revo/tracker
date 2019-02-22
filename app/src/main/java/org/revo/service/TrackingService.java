@@ -10,12 +10,16 @@ import android.os.IBinder;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationResult;
+
 import org.revo.domain.Calls;
 import org.revo.domain.Location;
 import org.revo.domain.Tracker;
 import org.revo.domain.User;
 
 import java.util.Date;
+import java.util.UUID;
 
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
@@ -42,6 +46,9 @@ public class TrackingService extends Service {
         Intent starter = new Intent(context, TrackingService.class);
         backServices.stopLocationUpdate();
         context.stopService(starter);
+        Log.d("org.revo.error", "closed");
+
+        stopSelf();
     }
 
     @Override
@@ -78,17 +85,20 @@ public class TrackingService extends Service {
             location(backServices).subscribe(new Consumer<Location>() {
                 @Override
                 public void accept(Location location) {
-
+                    Log.d("org.revo.error", "jjjjjjj");
+                    stop(getApplicationContext(), backServices);
                 }
             }, new Consumer<Throwable>() {
                 @Override
                 public void accept(Throwable throwable) {
                     Log.d("org.revo.error", throwable.getMessage());
+                    stop(getApplicationContext(), backServices);
                 }
             });
 
-
         stop(getApplicationContext(), backServices);
+
+
     }
 
     public static Maybe<Calls> calls(final BackServices backServices) {
@@ -142,14 +152,25 @@ public class TrackingService extends Service {
 
 
     public static Maybe<Location> location(final BackServices backServices) {
+        final String id = UUID.randomUUID().toString();
         return Flowable.create(new FlowableOnSubscribe<android.location.Location>() {
             @SuppressLint("MissingPermission")
             @Override
             public void subscribe(final FlowableEmitter<android.location.Location> e) {
-                backServices.location(e);
+                backServices.location(new LocationCallback() {
+                    @Override
+                    public void onLocationResult(LocationResult locationResult) {
+                        if (locationResult.getLastLocation() != null) {
+                            Log.d("org.revo.location.new", id + " " + locationResult.getLastLocation().getLatitude() + "," + locationResult.getLastLocation().getLongitude());
+                            e.onNext(locationResult.getLastLocation());
+                            e.onComplete();
+                        }
+
+                    }
+                });
             }
-        }, BackpressureStrategy.BUFFER)
-                .lastElement()
+        }, BackpressureStrategy.BUFFER).skip(3)
+                .firstElement()
                 .map(new Function<android.location.Location, Location>() {
                     @Override
                     public Location apply(android.location.Location location) {
