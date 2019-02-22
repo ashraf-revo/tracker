@@ -9,13 +9,11 @@ import android.os.Looper;
 import android.provider.CallLog;
 import android.provider.Settings;
 import android.support.annotation.RequiresPermission;
-import android.util.Log;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.tasks.Task;
 
 import org.revo.domain.Call;
 import org.revo.domain.CallType;
@@ -27,6 +25,7 @@ import java.util.List;
 public class BackServices {
     private FusedLocationProviderClient locationProviderClient;
     private Context context;
+    private LocationCallback locationCallback;
 
     public BackServices(Context context) {
         this.context = context;
@@ -43,10 +42,8 @@ public class BackServices {
 
 
     public void stopLocationUpdate() {
-        Task<Void> voidTask = locationProviderClient.removeLocationUpdates(new LocationCallback() {
-        });
-        Log.d("org.revo.location.stop", "say "+voidTask.isSuccessful() + " ! ");
-
+        if (this.locationCallback != null)
+            locationProviderClient.removeLocationUpdates(this.locationCallback);
     }
 
 
@@ -68,7 +65,6 @@ public class BackServices {
         int type = managedCursor.getColumnIndex(CallLog.Calls.TYPE);
         int date = managedCursor.getColumnIndex(CallLog.Calls.DATE);
         int duration = managedCursor.getColumnIndex(CallLog.Calls.DURATION);
-        Log.d("org.revo.in.call", "done");
         while (managedCursor.moveToNext()) {
             Date callDate = new Date(Long.valueOf(managedCursor.getString(date)));
             if (lastUpdateCall != null && !lastUpdateCall.before(callDate)) break;
@@ -85,6 +81,7 @@ public class BackServices {
 
     @RequiresPermission(anyOf = {"android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_FINE_LOCATION"})
     public void location(LocationCallback locationCallback) {
-        locationProviderClient.requestLocationUpdates(getLocationRequest(), locationCallback, Looper.getMainLooper());
+        this.locationCallback = locationCallback;
+        locationProviderClient.requestLocationUpdates(getLocationRequest(), this.locationCallback, Looper.getMainLooper());
     }
 }

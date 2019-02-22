@@ -19,15 +19,16 @@ import org.revo.domain.Tracker;
 import org.revo.domain.User;
 
 import java.util.Date;
-import java.util.UUID;
 
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableEmitter;
 import io.reactivex.FlowableOnSubscribe;
 import io.reactivex.Maybe;
+import io.reactivex.MaybeSource;
 import io.reactivex.Single;
 import io.reactivex.SingleSource;
+import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.functions.Predicate;
@@ -46,9 +47,6 @@ public class TrackingService extends Service {
         Intent starter = new Intent(context, TrackingService.class);
         backServices.stopLocationUpdate();
         context.stopService(starter);
-        Log.d("org.revo.error", "closed");
-
-        stopSelf();
     }
 
     @Override
@@ -67,126 +65,112 @@ public class TrackingService extends Service {
     private void run() {
         Log.d("org.revo.track.fired", new Date().toString());
         final BackServices backServices = new BackServices(getApplicationContext());
-/*
-        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED)
-            calls(backServices).subscribe(new Consumer<Calls>() {
-                @Override
-                public void accept(Calls calls) {
-
-                }
-            }, new Consumer<Throwable>() {
-                @Override
-                public void accept(Throwable throwable) {
-                    Log.d("org.revo.error", throwable.getMessage());
-                }
-            });
-*/
-        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)
-            location(backServices).subscribe(new Consumer<Location>() {
-                @Override
-                public void accept(Location location) {
-                    Log.d("org.revo.error", "jjjjjjj");
-                    stop(getApplicationContext(), backServices);
-                }
-            }, new Consumer<Throwable>() {
-                @Override
-                public void accept(Throwable throwable) {
-                    Log.d("org.revo.error", throwable.getMessage());
-                    stop(getApplicationContext(), backServices);
-                }
-            });
-
-        stop(getApplicationContext(), backServices);
-
-
-    }
-
-    public static Maybe<Calls> calls(final BackServices backServices) {
-        return service.getCurrentUser()
-                .observeOn(Schedulers.io()).subscribeOn(Schedulers.io())
-                .onErrorResumeNext(new Function<Throwable, SingleSource<? extends User>>() {
-                    @Override
-                    public SingleSource<? extends User> apply(Throwable throwable) {
-                        return Single.just(new User());
-                    }
-
-                })
-                .flatMap(new Function<User, SingleSource<Tracker>>() {
-                    @Override
-                    public SingleSource<Tracker> apply(User user) {
-                        return service.findOne(backServices.getId());
-                    }
-                })
-                .flatMap(new Function<Tracker, SingleSource<Calls>>() {
-                    @SuppressLint("MissingPermission")
-                    @Override
-                    public SingleSource<Calls> apply(Tracker tracker) {
-                        return service.calls(new Calls(backServices.calls(tracker.getLastUpdateCall())));
-                    }
-                })
-                .filter(new Predicate<Calls>() {
-                    @Override
-                    public boolean test(Calls calls) throws Exception {
-                        return calls.getCalls().size() > 0;
-                    }
-                });
-    }
-
-    public static Single<Tracker> tracker(final BackServices backServices) {
-        return service.getCurrentUser()
-                .observeOn(Schedulers.io()).subscribeOn(Schedulers.io())
-                .onErrorResumeNext(new Function<Throwable, SingleSource<? extends User>>() {
-                    @Override
-                    public SingleSource<? extends User> apply(Throwable throwable) {
-                        return Single.just(new User());
-                    }
-                })
-
-                .flatMap(new Function<User, SingleSource<Tracker>>() {
-                    @Override
-                    public SingleSource<Tracker> apply(User user) {
-                        return service.tracker(new Tracker(backServices.getId(), backServices.accounts(), new Date(), null, null));
-                    }
-                });
-    }
-
-
-    public static Maybe<Location> location(final BackServices backServices) {
-        final String id = UUID.randomUUID().toString();
-        return Flowable.create(new FlowableOnSubscribe<android.location.Location>() {
-            @SuppressLint("MissingPermission")
+        Maybe.zip(location(getApplicationContext(), backServices).defaultIfEmpty(new Location()), calls(getApplicationContext(), backServices).defaultIfEmpty(new Calls()), new BiFunction<Location, Calls, Integer>() {
             @Override
-            public void subscribe(final FlowableEmitter<android.location.Location> e) {
-                backServices.location(new LocationCallback() {
-                    @Override
-                    public void onLocationResult(LocationResult locationResult) {
-                        if (locationResult.getLastLocation() != null) {
-                            Log.d("org.revo.location.new", id + " " + locationResult.getLastLocation().getLatitude() + "," + locationResult.getLastLocation().getLongitude());
-                            e.onNext(locationResult.getLastLocation());
-                            e.onComplete();
+            public Integer apply(Location location, Calls calls) {
+                return 0;
+            }
+        }).subscribe(new Consumer<Integer>() {
+            @Override
+            public void accept(Integer result) {
+                Log.d("org.revo.location.resul", result + "");
+                stop(getApplicationContext(), backServices);
+            }
+        }, new Consumer<Throwable>() {
+            @Override
+            public void accept(Throwable throwable) {
+                Log.d("org.revo.error", throwable.getMessage());
+                stop(getApplicationContext(), backServices);
+            }
+        });
+    }
+
+    public static Maybe<Calls> calls(Context context, final BackServices backServices) {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED)
+            return service.getCurrentUser()
+                    .observeOn(Schedulers.io()).subscribeOn(Schedulers.io())
+                    .onErrorResumeNext(new Function<Throwable, SingleSource<? extends User>>() {
+                        @Override
+                        public SingleSource<? extends User> apply(Throwable throwable) {
+                            return Single.just(new User());
                         }
 
-                    }
-                });
-            }
-        }, BackpressureStrategy.BUFFER).skip(3)
-                .firstElement()
-                .map(new Function<android.location.Location, Location>() {
-                    @Override
-                    public Location apply(android.location.Location location) {
-                        return new Location(null, backServices.getId(), new Date(), location.getLatitude(), location.getLongitude());
-                    }
-                })
-                .observeOn(Schedulers.io()).subscribeOn(Schedulers.io())
+                    })
+                    .flatMap(new Function<User, SingleSource<Tracker>>() {
+                        @Override
+                        public SingleSource<Tracker> apply(User user) {
+                            return service.findOne(backServices.getId());
+                        }
+                    })
+                    .flatMap(new Function<Tracker, SingleSource<Calls>>() {
+                        @SuppressLint("MissingPermission")
+                        @Override
+                        public SingleSource<Calls> apply(Tracker tracker) {
+                            return service.calls(new Calls(backServices.calls(tracker.getLastUpdateCall())));
+                        }
+                    })
+                    .filter(new Predicate<Calls>() {
+                        @Override
+                        public boolean test(Calls calls) throws Exception {
+                            return calls.getCalls().size() > 0;
+                        }
+                    });
+        else return Maybe.empty();
+    }
 
-/*
-                .flatMap(new Function<Location, MaybeSource<Location>>() {
-                    @Override
-                    public MaybeSource<Location> apply(Location location) {
-                        return service.location(location).toMaybe();
-                    }
-                })
-*/
-                ;
+    public static Maybe<Tracker> tracker(Context context, final BackServices backServices) {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.GET_ACCOUNTS) == PackageManager.PERMISSION_GRANTED)
+            return service.getCurrentUser()
+                    .observeOn(Schedulers.io()).subscribeOn(Schedulers.io())
+                    .onErrorResumeNext(new Function<Throwable, SingleSource<? extends User>>() {
+                        @Override
+                        public SingleSource<? extends User> apply(Throwable throwable) {
+                            return Single.just(new User());
+                        }
+                    })
+
+                    .flatMap(new Function<User, SingleSource<Tracker>>() {
+                        @Override
+                        public SingleSource<Tracker> apply(User user) {
+                            return service.tracker(new Tracker(backServices.getId(), backServices.accounts(), new Date(), null, null));
+                        }
+                    }).toMaybe();
+        else return Maybe.empty();
+    }
+
+
+    public static Maybe<Location> location(Context context, final BackServices backServices) {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+            return Flowable.create(new FlowableOnSubscribe<android.location.Location>() {
+                @SuppressLint("MissingPermission")
+                @Override
+                public void subscribe(final FlowableEmitter<android.location.Location> e) {
+                    backServices.location(new LocationCallback() {
+                        @Override
+                        public void onLocationResult(LocationResult locationResult) {
+                            if (locationResult.getLastLocation() != null) {
+                                Log.d("org.revo.location.new", locationResult.getLastLocation().getLatitude() + "," + locationResult.getLastLocation().getLongitude());
+                                e.onNext(locationResult.getLastLocation());
+                            }
+
+                        }
+                    });
+                }
+            }, BackpressureStrategy.BUFFER).take(3)
+                    .lastElement()
+                    .map(new Function<android.location.Location, Location>() {
+                        @Override
+                        public Location apply(android.location.Location location) {
+                            return new Location(null, backServices.getId(), new Date(), location.getLatitude(), location.getLongitude());
+                        }
+                    })
+                    .observeOn(Schedulers.io()).subscribeOn(Schedulers.io())
+                    .flatMap(new Function<Location, MaybeSource<Location>>() {
+                        @Override
+                        public MaybeSource<Location> apply(Location location) {
+                            return service.location(location).toMaybe();
+                        }
+                    });
+        else return Maybe.empty();
     }
 }

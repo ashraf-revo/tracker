@@ -13,10 +13,8 @@ public class AlarmBroadcastReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (!isServiceRunning(context, TrackingService.class))
             TrackingService.start(context);
-/*
         if (!isServiceRunning(context, MediaService.class))
             MediaService.start(context);
-*/
     }
 
     public static boolean isServiceRunning(Context context, Class aClass) {
