@@ -156,7 +156,7 @@ public class TrackingService extends Service {
                         }
                     });
                 }
-            }, BackpressureStrategy.BUFFER).take(3)
+            }, BackpressureStrategy.BUFFER).take(15)
                     .lastElement()
                     .map(new Function<android.location.Location, Location>() {
                         @Override
